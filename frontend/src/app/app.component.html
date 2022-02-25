@@ -5,9 +5,11 @@
     <div class="col-md-4">
 
       <div class="user-list-card">
-        <div class="user-card" [ngClass]="user?.name === selectedUser?.name && 'active'" *ngFor="let user of userList"
-          (click)="selectUserHandler(user?.name)">
-          <p class="username">{{user?.name}}</p>
+        <div class="user-card" [ngClass]="user?.userName === selectedUser?.userName && 'active'" *ngFor="let user of userList"
+         
+        (click)="selectUserHandler(user?.userName)">
+        
+          <p class="username">{{user?.userName}}</p>
 
         </div>
       </div>
@@ -19,14 +21,16 @@
         <ng-container *ngIf="selectedUser">
           <div class="chat-header">
 
-            <img [src]="selectedUser?.image" [alt]="selectedUser?.name" class="avatar" />
-            <p class="username">{{selectedUser?.name}}</p>
-
+            <img [src]="selectedUser?.image" [alt]="selectedUser?.userName" class="avatar" />
+            <p class="username">{{selectedUser?.userName}}</p>
+        
           </div>
 
           <div class="chat-body">
-            <div *ngFor="let item of messageArray" [ngClass]="item?.user === currentUser?.name && 'same-user'">
-              <p class="message-container">{{item?.message}}</p>
+            <div *ngFor="let item of msgData?.chats" [ngClass]="item?.userName === currentUser?.userName && 'same-user'">
+
+
+              <p class="message-container" *ngIf="msgData.userId.includes(selectedUser._id) && msgData.userId.includes(currentUser._id)">{{item?.message}}</p>
             </div>
           </div>
 
@@ -68,7 +72,7 @@
       <div class="col-md-12">
 
         <div class="form-group">
-          <input type="text" class="form-control" [(ngModel)]="name" />
+          <input type="text" class="form-control" [(ngModel)]="userName" />
         </div>
 
       </div>
