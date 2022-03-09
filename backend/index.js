@@ -30,20 +30,40 @@ db.once("open", function () {
 });
 io.on('connection', (socket) => {
     socket.on('join', (data) => {
-        socket.join(data.room);
-        socket.broadcast.to(data.room).emit('user joined');
+        socket.join(data.fromUserId);
+        socket.broadcast.to(data.fromUserId).emit('user joined');
     });
 
     socket.on('message', async (data) => {
-        io.in(data.room).emit('new message', {
-            name: data.name,
-            message: data.message
+        io.emit('new message', {
+            message: data.message,toUserId:data.toUserId
         });
     });
 });
-app.get('/chat/:userId', async (req, res, next) => {
+app.post('/chat', async (req, res, next) => {
     try {
-        const user = await Msg.findOne({_id:req.params.userId})
+        const {fromUserId,toUserId }= req.body;
+    const data = {
+        '$or' : [
+            { '$and': [
+                {
+                    'toUserId': toUserId
+                },{
+                    'fromUserId': fromUserId
+                }
+            ]
+        },{
+            '$and': [
+                {
+                    'toUserId': fromUserId
+                }, {
+                    'fromUserId': toUserId
+                }
+            ]
+        },
+    ]
+};
+        const user = await Msg.find(data)
         res.status(200).json({
             error: false,
             message: "chat data fecthed Successfully",
@@ -55,43 +75,21 @@ app.get('/chat/:userId', async (req, res, next) => {
 })
 app.post('/add-chat', async (req, res, next) => {
     let {
-        userId,
-        chats
+        fromUserId,
+        message,
+        toUserId
     } = req.body
     try {
-        const userCheck = await Msg.findOne({
-            userId: userId
+        const userCheck = await Msg.create({
+            fromUserId: fromUserId,
+            message:message,
+            toUserId:toUserId
         });
-        if (userCheck) {
-       let    updateChat = await Msg.findOneAndUpdate({
-            userId: userId,
-        },  { $push: { chats: chats }},{
-            new: true
+        res.status(200).json({
+            error: false,
+            message: "chats Added Successfully",
+            response: userCheck
         })
-                res.status(200).json({
-                    error: false,
-                    message: "chats updated Successfully",
-                    response: updateChat
-                })
-        } else {
-            const user = await Msg.create({
-                userId,
-                chats,
-            });
-
-            userId.forEach( async(ele)=>{
-              await  User.updateOne({_id:ele},{$set:{
-                chartId:user._id
-                }})
-            })
-           
-
-            res.status(200).json({
-                error: false,
-                message: "chats Added Successfully",
-                response: user
-            })
-        }
     } catch (err) {
         next(err)
     }
@@ -112,66 +110,29 @@ app.get('/get-user', async (req, res, next) => {
 app.post('/add-user', async (req, res, next) => {
     let {
         userName,
-        email,
-        phoneNo,
-        roomId
+        password,
+        online,
+        socketId
     } = req.body
     try {
-        const userInfo = await User.insertMany({
-            userName,
-            email,
-            phoneNo,
-            roomId
-        })
-        res.status(200).json({
-            error: false,
-            message: "user data Added Successfully",
-            response: userInfo
-        })
+            const userInfo = await User.create({
+                userName,
+            password,
+            online,
+            socketId
+            })
+            res.status(200).json({
+                error: false,
+                message: "user data Added Successfully",
+                response: userInfo
+            }) 
+        
     } catch (err) {
         next(err)
     }
 });
-const addRoom = (roomid, ids) => {
-    return new Promise((resolve, reject) => {
-        var updataData = []
-        ids.forEach(async (element, i) => {
-            const userInfo = await User.findByIdAndUpdate({
-                _id: element
-            }, {
-                 $addToSet: { roomId: { $each:[roomid]}}
-            }, {
-                new: true
-            });
-            updataData.push(userInfo);
-            if (ids.length - 1 == i) {
-              resolve(updataData) 
-            }
-        });
 
 
-    })
-}
-app.put('/update-user', async (req, res, next) => {
-    try {
-        const {
-            roomid,
-            ids
-        } = req.body;
-        try {
-            let data = await addRoom(roomid, ids);
-            res.status(200).json({
-                error: false,
-                message: "user data Updated Successfully",
-                response: data
-            })
-        } catch (err) {
-            next(err)
-        }
-    } catch (err) {
-        next(err)
-    }
-})
 server.listen(port, () => {
     console.log(`started on port: ${port}`);
 });
